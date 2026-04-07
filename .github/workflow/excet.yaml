@@ -1,13 +1,12 @@
-name: Build & Deploy Jekyll Site to S3
+name: Deploy Static Website to S3
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     env:
@@ -16,7 +15,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     steps:
-      # 1️⃣ Checkout repo
+      # 1️⃣ Checkout code
       - uses: actions/checkout@v4
 
       # 2️⃣ Setup Terraform
@@ -25,29 +24,21 @@ jobs:
         with:
           terraform_version: 1.6.5
 
-      # 3️⃣ Terraform init & apply
+      # 3️⃣ Terraform Init & Apply
       - name: Terraform Init & Apply
         run: |
           terraform init
           terraform apply -auto-approve
 
-      # 4️⃣ Get website URL from Terraform output
+      # 4️⃣ Get website URL
       - name: Get website URL
         id: website
         run: echo "WEBSITE_URL=$(terraform output -raw website_url)" >> $GITHUB_ENV
 
-      # 5️⃣ Replace placeholder in HTML with the actual S3 URL
+      # 5️⃣ Replace placeholder in HTML
       - name: Replace WEBSITE_URL in HTML
         run: sed -i "s|{{WEBSITE_URL}}|$WEBSITE_URL|g" ./app/index.html
 
-      # 6️⃣ Build the site in Jekyll Docker container
-      - name: Build the site with Jekyll
-        run: |
-          docker run \
-            -v ${{ github.workspace }}/app:/srv/jekyll \
-            -v ${{ github.workspace }}/app/_site:/srv/jekyll/_site \
-            jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
-
-      # 7️⃣ Sync the built site to S3
+      # 6️⃣ Upload website files to S3
       - name: Upload site to S3
-        run: aws s3 sync ./app/_site s3://my-static-website-bucket --acl public-read --delete
+        run: aws s3 sync ./app s3://my-static-website-bucket --acl public-read --delete

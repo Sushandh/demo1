@@ -1,14 +1,12 @@
 provider "aws" {
-  region = "us-east-1" # Change to your preferred region
+  region = "us-east-1"
 }
 
-#############################################################
 # 1️⃣ Create S3 Bucket for Static Website
-#############################################################
 resource "aws_s3_bucket" "static_website" {
-  bucket = "my-deom-bucket-003" # Change to a unique name
-  acl    = "public-read"
-  force_destroy = true
+  bucket         = "my-demo-bucket-004" # Change to a unique name
+  acl            = "public-read"
+  force_destroy  = true
 
   website {
     index_document = "index.html"
@@ -16,7 +14,7 @@ resource "aws_s3_bucket" "static_website" {
   }
 }
 
-# Public read access policy
+# Public read access
 resource "aws_s3_bucket_policy" "public_access" {
   bucket = aws_s3_bucket.static_website.id
   policy = jsonencode({
@@ -30,9 +28,7 @@ resource "aws_s3_bucket_policy" "public_access" {
   })
 }
 
-#############################################################
 # 2️⃣ SNS Topic for Alerts
-#############################################################
 resource "aws_sns_topic" "alerts" {
   name = "website-alerts"
 }
@@ -40,12 +36,10 @@ resource "aws_sns_topic" "alerts" {
 resource "aws_sns_topic_subscription" "email_subscription" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
-  endpoint  = "ktsushandh978@gmail.com" # Change to your email
+  endpoint  = "your-email@example.com" # Change to your email
 }
 
-#############################################################
 # 3️⃣ Route53 Health Check
-#############################################################
 resource "aws_route53_health_check" "website_health" {
   fqdn              = aws_s3_bucket.static_website.website_endpoint
   type              = "HTTPS"
@@ -55,9 +49,7 @@ resource "aws_route53_health_check" "website_health" {
   failure_threshold = 3
 }
 
-#############################################################
 # 4️⃣ CloudWatch Alarm
-#############################################################
 resource "aws_cloudwatch_metric_alarm" "website_down_alarm" {
   alarm_name          = "WebsiteDownAlarm"
   comparison_operator = "GreaterThanThreshold"
@@ -75,15 +67,8 @@ resource "aws_cloudwatch_metric_alarm" "website_down_alarm" {
   }
 }
 
-#############################################################
 # 5️⃣ Outputs
-#############################################################
 output "website_url" {
   description = "The URL of the static website"
   value       = aws_s3_bucket.static_website.website_endpoint
-}
-
-output "sns_topic_arn" {
-  description = "SNS topic ARN for email alerts"
-  value       = aws_sns_topic.alerts.arn
 }

@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>My Jekyll Site</title>
+    <title>My Static Website</title>
 </head>
 <body>
-    <h1>Welcome to My Site!</h1>
+    <h1>Welcome!</h1>
     <button onclick="login()">View Image</button>
 
     <script>
-        const WEBSITE_URL = "{{WEBSITE_URL}}"; // This will be replaced in workflow
+        const WEBSITE_URL = "{{WEBSITE_URL}}"; // Will be replaced by workflow
 
         function login() {
-            window.location.href = `${WEBSITE_URL}/image.png`;
-        }
+    window.location.href = "http://my-static-website-bucket.s3-website-us-east-1.amazonaws.com/terraformimage.jpg";
+}
     </script>
 </body>
 </html>
