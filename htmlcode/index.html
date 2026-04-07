@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Static Website</title>
+</head>
+<body>
+    <h1>Welcome!</h1>
+    <button onclick="login()">View Image</button>
+
+    <script>
+        // Set this URL after Terraform deploy or via GitHub Actions
+        const WEBSITE_URL = "http://my-static-website-bucket.s3-website-us-east-1.amazonaws.com";
+
+        function login() {
+            window.location.href = `${WEBSITE_URL}/image.jpg`;
+        }
+    </script>
+</body>
+</html>
