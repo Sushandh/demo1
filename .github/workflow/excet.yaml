@@ -1,36 +1,53 @@
-name: Deploy Static Website with Terraform
+name: Build & Deploy Jekyll Site to S3
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     env:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      # 1️⃣ Checkout repo
+      - uses: actions/checkout@v4
 
+      # 2️⃣ Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.5
 
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-      - name: Sync website files to S3
+      # 3️⃣ Terraform init & apply
+      - name: Terraform Init & Apply
         run: |
-          WEBSITE_URL=$(terraform output -raw website_url)
-          # Replace placeholder in HTML (optional)
-          sed -i "s|http://my-static-website-bucket.s3-website-us-east-1.amazonaws.com|$WEBSITE_URL|g" ./app/index.html
-          aws s3 sync ./app s3://my-static-website-bucket --acl public-read --delete
+          terraform init
+          terraform apply -auto-approve
+
+      # 4️⃣ Get website URL from Terraform output
+      - name: Get website URL
+        id: website
+        run: echo "WEBSITE_URL=$(terraform output -raw website_url)" >> $GITHUB_ENV
+
+      # 5️⃣ Replace placeholder in HTML with the actual S3 URL
+      - name: Replace WEBSITE_URL in HTML
+        run: sed -i "s|{{WEBSITE_URL}}|$WEBSITE_URL|g" ./app/index.html
+
+      # 6️⃣ Build the site in Jekyll Docker container
+      - name: Build the site with Jekyll
+        run: |
+          docker run \
+            -v ${{ github.workspace }}/app:/srv/jekyll \
+            -v ${{ github.workspace }}/app/_site:/srv/jekyll/_site \
+            jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+
+      # 7️⃣ Sync the built site to S3
+      - name: Upload site to S3
+        run: aws s3 sync ./app/_site s3://my-static-website-bucket --acl public-read --delete
